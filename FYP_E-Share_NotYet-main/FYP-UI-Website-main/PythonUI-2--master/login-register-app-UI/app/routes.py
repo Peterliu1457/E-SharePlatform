@@ -231,3 +231,26 @@ def get_current_user():
 @app.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
     user = get_current_user()  # 獲取當前用戶
+
+    if request.method == 'POST':
+        # 取得用戶提交的表單資料
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # 更新用戶在 BigQuery 表中的資料
+        table_id = "peterproject-364114.userdata.Userdata"
+        table = client.get_table(table_id)
+
+        row = (user.username, email, password)
+        errors = client.update_rows(table, [row], ["email", "password"], [0])
+
+        if not errors:
+            return redirect(url_for('user', username=user.username))
+        else:
+            return "Error updating row in BigQuery table: {}".format(errors)
+
+    return render_template('edit_profile.html', user=user)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

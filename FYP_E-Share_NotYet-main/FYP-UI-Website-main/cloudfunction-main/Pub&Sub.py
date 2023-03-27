@@ -88,3 +88,28 @@ streaming_pull_future = subscriber.subscribe(subscription_path, callback=callbac
 
 print("Listening for messages on {}.".format(subscription_path))
 NUM_MESSAGES = 3    
+
+# 使用 'with' 區塊將訂閱者包裹起來，以便在完成時自動調用 close() 來關閉底層的 gRPC 通道。
+with subscriber:
+    # 訂閱者拉取特定數量的訊息。 實際拉取的訊息數可能小於 max_messages。
+    response = subscriber.pull(
+        request={"subscription": subscription_path, "max_messages": NUM_MESSAGES},
+        retry=retry.Retry(deadline=300),
+    )
+
+    if len(response.received_messages) == 0:
+        print("No messages received.")
+    else:
+        ack_ids = []
+        for received_message in response.received_messages:
+            print(f"Received: {received_message.message.data}.")
+            ack_ids.append(received_message.ack_id)
+
+        # 確認接收到的訊息，以便它們不會再次發送。
+        subscriber.acknowledge(
+            request={"subscription": subscription_path, "ack_ids": ack_ids}
+        )
+
+        print(
+            f"Received and acknowledged {len(response.received_messages)} messages from {subscription_path}."
+        )

@@ -149,3 +149,85 @@ def register_submit():
         'password': password
     }
     # 在这里使用 user_data 字典进行后续操作   
+ # 将注册数据插入到 BigQuery 表中
+    table_id = "peterproject-364114.userdata.Userdata"
+    client = bigquery.Client()
+    table = client.get_table(table_id)
+
+    row = [(username, email, password , role)]
+    errors = client.insert_rows(table, row)
+
+    if errors == []:
+        return redirect(url_for('login'))
+    else:
+        return "Error inserting row into BigQuery table: {}".format(errors)
+
+    return '注册成功！'
+
+# 登录提交
+@app.route('/login_submit', methods=['POST'])
+def login_submit():
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+# 在 BigQuery 表中查找普通用户
+    user_table_id = "peterproject-364114.userdata.Userdata"
+    user_query = f"SELECT * FROM {user_table_id} WHERE username = @username AND password = @password"
+    user_job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("username", "STRING", username),
+            bigquery.ScalarQueryParameter("password", "STRING", password),
+        ]
+    )
+    user_query_job = client.query(user_query, job_config=user_job_config)
+    user_results = user_query_job.result()
+
+    # 如果找到普通用户，重定向到 user page
+    if user_results.total_rows == 1:
+        return redirect(url_for('user'))
+    else:
+    # 如果找不到用户，则返回错误消息
+        return "Incorrect username or password"
+
+# 管理頁面
+@app.route('/admin')
+def admin():
+    # 從BigQuery表中獲取所有用戶數據
+    table_id = "peterproject-364114.userdata.Userdata"
+    query = "SELECT * FROM {}".format(table_id)
+    query_job = client.query(query)
+    results = query_job.result()
+
+    return render_template('admin.html', results=results)
+print('hello')
+# @login_required
+# 用戶主頁面
+@app.route('/user/<username>')
+def user(username):
+    # 在 BigQuery 中查找用户数据
+    print("user route")
+    table_id = "peterproject-364114.userdata.Userdata"
+    query = "SELECT * FROM {} WHERE username = '{}'".format(table_id, username)
+    print(query)
+    query_job = client.query(query)
+    print(query_job)
+    results = query_job.result()
+    print(results)
+
+    # 如果找到用户数据，就返回用户主页
+    for row in results:
+        print(row)
+        return render_template('user.html', user=row)
+
+    # 如果未找到用户数据，就返回404错误
+    return "User not found", 404
+
+
+# 個人資料編輯頁面
+def get_current_user():
+    pass
+
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    user = get_current_user()  # 獲取當前用戶

@@ -1,0 +1,8 @@
+pip install --upgrade google-cloud
+pip install --upgrade google-cloud-bigquery
+pip install --upgrade google-cloud-storage
+pip install google-cloud-vision
+pip install flask_login
+pip install from google.cloud 
+pip install flask
+pip install waitress

@@ -67,3 +67,85 @@ def register():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+ # index
+@app.route('/index')
+@login_required
+def index():
+    # 從 BigQuery 中獲取帖子數據
+    print("index")
+    table_id = "peterproject-364114.postdata.Postdata"
+    query = "SELECT * FROM {} ORDER BY timestamp DESC".format(table_id)
+    query_job = client.query(query)
+    results = query_job.result()
+
+    posts = []
+    for row in results:
+        post = {'author': {'username': row['username']}, 'body': row['body']}
+        posts.append(post)
+
+    return render_template('index.html', title='Home', posts=posts)
+
+
+# 登錄頁面
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    print("login")
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role')
+
+        # 在 BigQuery 表中查詢用戶數據
+        table_id = "peterproject-364114.userdata.Userdata"
+        query = f"SELECT * FROM {table_id} WHERE username = @username AND password = @password"
+        print(query)
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("username", "STRING", username),
+                bigquery.ScalarQueryParameter("password", "STRING", password),
+            ]
+        )
+
+        query_job = client.query(query, job_config=job_config)
+        print(query_job)
+        results = query_job.result()
+        print(results)
+
+        if(results.total_rows == 1):
+            for row in query_job:
+                print(row)
+                role = row["role"]
+        else:
+            role = -1
+
+        #print(results.row)
+        #print(results.row.role)
+        if role == "admin":
+            return redirect(url_for('admin', username=username))
+        elif role == "" or role is None:
+            return redirect(url_for('user', username=username))
+        else:
+            return "Incorrect username or password"
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
+
+# 註冊提交
+@app.route('/register', methods=['POST'])
+def register_submit():
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    role = request.form.get('role')
+
+    user_data = {
+        'username': username,
+        'email': email,
+        'password': password
+    }
+    # 在这里使用 user_data 字典进行后续操作   

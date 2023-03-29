@@ -30,30 +30,6 @@ resource "google_storage_bucket_object" "vision" {
     source = "vision.zip"
 }
 
-resource "google_cloudfunctions_function" "gcs2bq" {
-  name = "gcs2bq"
-  runtime = "python310"
-  description = "gcs2bq"
-
-  available_memory_mb = 256
-  source_archive_bucket = google_storage_bucket.upload.name
-  source_archive_object = google_storage_bucket_object.gcs2bq.name
-  event_trigger {
-    event_type = "google.storage.object.finalize"
-    resource     = google_storage_bucket.processed_bucket.name
-  }
-
-  entry_point = "gcs2bq"
-}
-
-resource "google_cloudfunctions_function" "vision" {
-  name = "vision"
-  runtime = "python310"
-  description = "visionning"
-
-  available_memory_mb = 256
-  source_archive_bucket = google_storage_bucket.upload.name
-  source_archive_object = google_storage_bucket_object.vision.name
 
   event_trigger {
     event_type = "google.storage.object.finalize"
